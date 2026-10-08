@@ -1,0 +1,143 @@
+# 🌍 WanderWise — Agentic Travel Concierge
+
+WanderWise is an agentic travel concierge built on Google Cloud with the **Agent Development Kit (ADK)**, deployed to **Vertex AI Agent Runtime**, and connected to a custom chat frontend on **Cloud Run** via the **A2A Protocol**.
+
+It transforms trip planning from fragmented searches into a seamless itinerary generation experience: matching lodging from a Firestore catalog, evaluating real-time weather and advisories, discovering trending events, structuring full day-by-day morning/afternoon/evening activity schedules with Google Maps links, computing budget limits, and persisting saved trips.
+
+---
+
+## ⚡ What WanderWise Does
+
+Based directly on the tools implemented in `app/`:
+
+- 🏨 **Lodging Discovery & Filtering (`search_lodgings`, `search_live_lodgings`)**:
+  - Searches vetted accommodations stored in **Cloud Firestore** and live web sources.
+  - Filters strictly by destination, nightly price cap, and minimum review rating.
+  - Returns exactly 3 tailored lodging options with nightly rates, neighborhoods, review scores, official website links, and Google Maps search links.
+- 🗺️ **Comprehensive Day-by-Day Itineraries (`search_destination_activities`, `generate_google_maps_link`)**:
+  - Dynamically plans every day of the trip broken down into **Morning**, **Afternoon**, and **Evening** schedules tailored to traveler preferences (e.g., historic temples, traditional food, cultural sights).
+  - Generates clickable Google Maps links for every attraction, restaurant, and activity.
+- 🌤️ **Destination Weather & Advisories (`check_destination_weather`)**:
+  - Retrieves real-time forecasts, temperatures, and rain probabilities for destination travel dates.
+  - Alerts travelers in advance to rain risk or severe weather warnings.
+- 🍁 **Trending Local Events (`search_local_events`)**:
+  - Finds real festivals, exhibitions, concerts, and cultural events taking place during the traveler's specific dates.
+- 💰 **Budget Calculation & Alerts (`calculate_trip_budget`)**:
+  - Calculates total lodging across nights and estimates daily food, transit, and attraction costs.
+  - Evaluates total cost against the user's budget ceiling and triggers a warning (`🚨 RED ALERT: OVER BUDGET BY $X`) when exceeded.
+- 💾 **Itinerary Persistence (`save_itinerary`, `list_saved_itineraries`, `delete_saved_itinerary`)**:
+  - Full CRUD operations backed by **Google Cloud Firestore** to save trips, view past itineraries, or delete old plans.
+- 🪟 **Agent-to-User Interface (`A2UI`)**:
+  - Emits A2UI standard component surfaces (`Card`, `Column`, `Row`, `Text`, `Image`) processed by an `after_model_callback`, rendering interactive cards in both ADK Web and the custom frontend.
+
+---
+
+## 🛠️ Google Cloud & Architecture Stack
+
+| Layer | Service / Tech | Purpose in WanderWise |
+|---|---|---|
+| **Agent Reasoning Engine** | [Vertex AI Agent Runtime](https://cloud.google.com/vertex-ai) + [ADK](https://google.github.io/adk-docs/) | Core ReAct agent powered by `gemini-3.8-flash` executing multi-step tool calls. |
+| **Communication Protocol** | [A2A (Agent-to-Agent)](https://a2a-protocol.org/) | Standardized agent communication protocol connecting the agent engine to clients. |
+| **Database / Persistence** | [Cloud Firestore](https://cloud.google.com/firestore) | Stores vetted lodging catalog (`lodgings` collection) and user itineraries (`itineraries` collection). |
+| **Agent-first UI** | [A2UI](https://adk.dev/integrations/a2ui/) | Renders rich structured cards and tables. |
+| **Frontend & Proxy** | [Cloud Run](https://cloud.google.com/run) + FastAPI | Web chat interface communicating with the deployed agent via A2A. |
+
+### 📌 Feature Status Note
+- **Cloud Firestore**: Fully implemented (`app/firestore_tools.py`) for lodging search and itinerary CRUD.
+- **A2UI**: Fully implemented (`app/a2ui_utils.py` and `app/agent.py`) for card-based UI rendering.
+- **External Function Tools**: Fully implemented for activities, weather, events, maps, and budget math.
+- **Agent Platform Memory Bank**: *Planned / Not yet implemented* (session history is maintained within active A2A conversations).
+- **Cloud Storage & Image Generation**: *Planned / Not yet implemented* (postcard and moodboard generation).
+
+---
+
+## 📂 Project Structure
+
+```
+wanderwise/
+├── app/
+│   ├── agent.py                 # Main agent definition & tool registry
+│   ├── a2ui_utils.py            # A2UI response sanitizer & callback
+│   ├── activity_tools.py        # Attraction discovery & Maps link generation
+│   ├── event_budget_tools.py    # Local events lookup & budget calculator
+│   ├── firestore_tools.py       # Firestore lodgings & itinerary CRUD
+│   ├── lodging_search_tool.py   # Live web lodging search fallback
+│   ├── maps_tools.py            # Google Maps search URL generator
+│   ├── weather_tools.py         # Weather & advisory lookup
+│   └── fast_api_app.py          # A2A application server
+├── frontend/
+│   ├── main.py                  # FastAPI proxy connecting browser to A2A agent
+│   ├── static/index.html        # Web chat UI with built-in A2UI card renderer
+│   ├── requirements.txt         # Frontend dependencies
+│   └── Dockerfile               # Container spec for Cloud Run deployment
+├── seed_firestore.py            # Script to populate sample lodging data
+├── agents-cli-manifest.yaml     # Agent deployment metadata
+└── pyproject.toml               # Python project dependencies
+```
+
+---
+
+## 🚀 Setup & Local Execution
+
+### 1. Prerequisites
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) or standard `pip` / `venv`
+- Google Cloud SDK (`gcloud`) authenticated to your project with Firestore enabled
+
+### 2. Install Agent Dependencies & Seed Data
+```bash
+# From the wanderwise directory:
+uv venv
+source .venv/bin/activate
+uv pip install -r pyproject.toml
+
+# Populate sample lodging data in Firestore:
+python seed_firestore.py
+```
+
+### 3. Run Agent in Development Playground
+You can test the agent locally using the `agents-cli` playground:
+```bash
+agents-cli playground
+```
+The playground will start a local server for interactive testing.
+
+### 4. Run the Web Frontend Locally
+To test the custom chat UI with the A2A proxy:
+```bash
+cd frontend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Export your agent runtime resource name (from deployment_metadata.json):
+export AGENT_ENGINE_RESOURCE_NAME="projects/<PROJECT_ID>/locations/<REGION>/reasoningEngines/<ENGINE_ID>"
+export AGENT_DIRECTORY="app"
+
+python main.py
+```
+Visit the running server in your browser to interact with WanderWise.
+
+### 5. Deploying Updates
+
+**Deploy Agent to Agent Runtime:**
+```bash
+agents-cli deploy --project <PROJECT_ID> --no-confirm-project
+```
+
+**Deploy Frontend to Cloud Run:**
+```bash
+cd frontend
+gcloud run deploy wanderwise-frontend \
+  --source . \
+  --region <REGION> \
+  --platform managed \
+  --allow-unauthenticated \
+  --set-env-vars AGENT_ENGINE_RESOURCE_NAME="projects/<PROJECT_ID>/locations/<REGION>/reasoningEngines/<ENGINE_ID>",AGENT_DIRECTORY="app"
+```
+
+---
+
+## 📄 License
+
+Licensed under the Apache License, Version 2.0.
