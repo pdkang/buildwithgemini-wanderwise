@@ -73,6 +73,52 @@
   .a2divider { border:none; border-top:1px solid var(--border); margin:.4rem 0; width:100%; }
   .a2img { max-width:100%; border-radius:8px; display:block; }
   .material-symbols-outlined { font-family:'Material Symbols Outlined'; font-size:1.25rem; line-height:1; vertical-align:middle; color:var(--accent); }
+
+  /* Example Prompts Bar */
+  .suggestions-bar {
+    display: flex;
+    gap: .5rem;
+    padding: .6rem 1rem 0;
+    background: #fff;
+    overflow-x: auto;
+    white-space: nowrap;
+    border-top: 1px solid var(--border);
+    max-width: 850px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .75rem;
+    font-size: .82rem;
+    color: var(--accent);
+    background: var(--accent-light);
+    border: 1px solid #ccfbf1;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all .15s ease;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .chip:hover {
+    background: #ccfbf1;
+    color: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 1px 3px rgba(15,118,110,0.15);
+  }
+  .chip-icon { font-size: .95rem; }
+  .input-area {
+    background: #fff;
+    border-top: none;
+    padding: .5rem 1rem 1rem;
+    display: flex;
+    gap: .5rem;
+    max-width: 850px;
+    width: 100%;
+    margin: 0 auto;
+  }
 </style>
 </head>
 <body>
@@ -81,9 +127,22 @@
   <div class="brand-subtitle">AI Travel Concierge</div>
 </header>
 <div id="log"></div>
-<form id="form">
-  <input id="input" placeholder="Ask something…" autocomplete="off" autofocus>
-  <button>Send</button>
+
+<div class="suggestions-bar">
+  <button type="button" class="chip" data-prompt="Plan a 3-day weekend trip to Tokyo with 3 lodging options under $250/night, daily activities, and local events.">
+    <span class="chip-icon">🗼</span> Tokyo 3-Day Trip ($250 cap)
+  </button>
+  <button type="button" class="chip" data-prompt="Recommend 3 boutique stays in Paris under $300/night with ratings above 4.5 and nearby walking tours.">
+    <span class="chip-icon">🏨</span> Paris Stays & Activities
+  </button>
+  <button type="button" class="chip" data-prompt="What is the weather in Rome this week and what trending festivals or events are happening?">
+    <span class="chip-icon">☀️</span> Rome Weather & Events
+  </button>
+</div>
+
+<form id="form" class="input-area">
+  <input id="input" placeholder="Ask WanderWise to plan a trip, search lodging, or check events…" autocomplete="off" autofocus>
+  <button type="submit">Send</button>
 </form>
 
 <script>
@@ -259,9 +318,7 @@ function renderReply(b, parts) {
   log.scrollTop = log.scrollHeight;
 }
 
-form.addEventListener("submit", async (ev) => {
-  ev.preventDefault();
-  const text = input.value.trim();
+async function sendMessage(text) {
   if (!text) return;
   bubble("user").textContent = text;
   input.value = "";
@@ -276,6 +333,20 @@ form.addEventListener("submit", async (ev) => {
   } catch (e) {
     b.textContent = "Error: " + e.message;
   }
+}
+
+form.addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  sendMessage(input.value.trim());
+});
+
+document.querySelectorAll(".chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    const prompt = chip.getAttribute("data-prompt");
+    if (prompt) {
+      sendMessage(prompt);
+    }
+  });
 });
 </script>
 </body>
