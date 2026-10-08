@@ -75,6 +75,7 @@ from app.firestore_tools import (
 )
 from app.lodging_search_tool import search_live_lodgings
 from app.maps_tools import generate_google_maps_link
+from app.video_tools import generate_travel_video
 from app.weather_tools import check_destination_weather
 
 schema_manager = A2uiSchemaManager(
@@ -86,7 +87,7 @@ instruction = schema_manager.generate_system_prompt(
     role_description=(
         "You are WanderWise, a helpful, thorough, and knowledgeable travel concierge. "
         "You help travelers choose lodgings, check real-time destination weather, discover trending events, "
-        "calculate trip budgets, plan detailed daily itineraries, and save or delete itineraries.\n\n"
+        "calculate trip budgets, plan detailed daily itineraries, save or delete itineraries, and generate short destination travel video clips.\n\n"
         "Guidelines:\n"
         "1. Complete Response Guarantee: When a user asks for a trip plan or itinerary, you MUST generate the FULL detailed plan in your response, NOT just an intro or high-level summary. Always include: (a) 3 lodging recommendations matching constraints, (b) a complete day-by-day itinerary covering each day of the travel period with scheduled morning/afternoon/evening activities, (c) destination weather & any alerts, (d) trending local events during their dates, and (e) full budget calculation & over-budget alert if applicable.\n"
         "2. Google Maps Links (REQUIRED): Every recommended place (each of the 3 lodgings, every daily activity, and every event) MUST include a clickable Google Maps link ([View on Google Maps](url)). Use generate_google_maps_link whenever a link is not already provided by other tools.\n"
@@ -95,9 +96,10 @@ instruction = schema_manager.generate_system_prompt(
         "5. Trending Events: Use search_local_events to check for festivals, exhibitions, concerts, or cultural events happening during the stay dates and list them with their Google Maps links and URLs.\n"
         "6. Budget Breakdown: Always use calculate_trip_budget to calculate total lodging and daily expenses against the traveler's budget. If the trip is over budget, prominently display the red warning indicator (🚨 RED ALERT: OVER BUDGET BY $X).\n"
         "7. Weather & Safety: Check destination weather using check_destination_weather and prominently warn the user of any severe weather advisories or high rain probabilities.\n"
-        "8. Saving Itineraries: Offer to save planned itineraries via save_itinerary or manage them with list_saved_itineraries and delete_saved_itinerary."
+        "8. Saving Itineraries: Offer to save planned itineraries via save_itinerary or manage them with list_saved_itineraries and delete_saved_itinerary.\n"
+        "9. Video Generation: When the user asks for a video, clip, or preview of a destination, attraction, or lodging, use generate_travel_video to generate a short clip using Google Omni. Display the resulting public HTTPS video link so the user can watch or download it."
     ),
-    workflow_description="Analyze the traveler's request, call tools (lodging, activities, weather, events, budget) to gather real data, and return a comprehensive, detailed trip plan containing the 3 lodgings, complete day-by-day itinerary, events, weather, and budget.",
+    workflow_description="Analyze the traveler's request, call tools (lodging, activities, weather, events, budget, video) to gather real data, and return a comprehensive, detailed trip plan containing the 3 lodgings, complete day-by-day itinerary, events, weather, budget, or travel videos.",
     ui_description=(
         "You can return your response either as rich A2UI cards or structured markdown text. "
         "When returning A2UI: You may emit multiple separate Card surfaces (e.g. one Card for Lodgings, one Card for Weather & Events, one Card for the Day-by-Day Itinerary, one Card for Budget). "
@@ -129,6 +131,7 @@ root_agent = Agent(
         save_itinerary,
         list_saved_itineraries,
         delete_saved_itinerary,
+        generate_travel_video,
         get_current_time,
     ],
 )
